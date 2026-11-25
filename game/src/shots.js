@@ -29,22 +29,27 @@ export function applyShot(world, params) {
   world.readyToServe = false;
 
   if (shot === 'start') {
+    // 封面：横幅标题 + 身后就是热闹的厨房（汉堡做到一半、肉饼在煎）。
+    world.orders[0].steps[0].done = true;
+    world.orders[0].stepIndex = 1;
+    world.plated = ['bread'];
+    world.activeStep = { orderId: world.orders[0].id, ing: 'patty', action: 'fry', progress: 65, hits: 5, max: 100 };
     world.screen = 'title';
     world.score = 0; world.combo = 0; world.servedCount = 0;
     return true;
   }
   if (shot === 'play') {
-    // 汉堡做到一半：面包已上盘，肉饼正在煎，番茄等着切。
+    // 汉堡做到一半：面包已上盘，肉饼正在煎（火候表针在绿区），番茄等着切。
     world.orders[0].steps[0].done = true;
     world.orders[0].stepIndex = 1;
     world.plated = ['bread'];
-    world.activeStep = { orderId: world.orders[0].id, ing: 'patty', action: 'fry', progress: 3, hits: 5, max: 5 };
-    world.hint = '点煎锅煎肉饼！';
+    world.activeStep = { orderId: world.orders[0].id, ing: 'patty', action: 'fry', progress: 65, hits: 5, max: 100 };
+    world.hint = '看火候表！绿区点煎锅';
     world.hintUntil = 999;
     return true;
   }
   if (shot === 'serve') {
-    // 汉堡全做好，放在出餐盘上，等上菜；连击 x3。
+    // 汉堡全做好，放在出餐盘上，等上菜；连击 x3，飘着 +185 和完美火候。
     const order = world.orders[0];
     order.steps.forEach((s) => { s.done = true; });
     order.stepIndex = order.steps.length;
@@ -54,6 +59,10 @@ export function applyShot(world, params) {
     world.score = 650;
     world.combo = 3;
     world.servedCount = 7;
+    world.floats = [
+      { text: '+185', x: 730, y: 290, ttl: 1.2 },
+      { text: '完美火候！', x: 730, y: 250, ttl: 1.2 },
+    ];
     world.hint = '芝士汉堡做好了！点出餐口上菜';
     world.hintUntil = 999;
     return true;

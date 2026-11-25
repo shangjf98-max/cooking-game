@@ -26,7 +26,7 @@ export function hitTest(p) {
   if (inside(p, L.pan)) return { kind: 'station', action: 'fry' };
   if (inside(p, L.pot)) return { kind: 'station', action: 'boil' };
   if (inside(p, L.serveBtn) || inside(p, L.servePlate)) return { kind: 'serve' };
-  if (inside(p, { x: 490, y: 500, w: 300, h: 64 })) return { kind: 'confirm' };
+  if (inside(p, { x: 490, y: 320, w: 300, h: 64 }) || inside(p, { x: 490, y: 480, w: 300, h: 64 })) return { kind: 'confirm' };
   return null;
 }
 

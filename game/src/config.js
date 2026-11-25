@@ -46,7 +46,20 @@ export const RECIPES = [
       { ing: 'cheese', label: '放芝士' },
     ],
   },
+  {
+    id: 'double', name: '双层汉堡', base: 220,
+    steps: [
+      { ing: 'bread', label: '放面包' },
+      { ing: 'patty', label: '煎肉饼' },
+      { ing: 'cheese', label: '放芝士' },
+      { ing: 'patty', label: '再煎肉饼' },
+      { ing: 'lettuce', label: '切生菜' },
+    ],
+  },
 ];
+
+// 上菜越多，单越急：每上 3 单，新单时限少 5 秒，最少 30 秒。
+export const ORDER_SECONDS_FLOOR = 30;
 
 export const RECIPE_BY_ID = Object.fromEntries(RECIPES.map((r) => [r.id, r]));
 

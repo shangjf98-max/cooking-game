@@ -13,7 +13,7 @@ Everything here is invented for this game — the kitchen, the recipes, the cust
 - **Mouse** — click an ingredient bin, then click the chopping board, frying pan or pot to work it; click the serve window (or the green Serve button) to serve a finished dish.
 - **Keyboard** — `1`–`6` pick an ingredient, `C` chop, `F` fry, `B` boil, `Space` serve, `Enter` start / restart, `P` pause.
 - **Loop** — order → chop / fry / boil → plate → serve → score + combo → an order that times out costs one heart. Lose all three hearts, or reach the end of the 180-second shift, and the shift ends.
-- **Menu** — Tomato Salad (chop lettuce, chop tomato), Cheese Burger (bread, fry patty, cheese, chop lettuce), Tomato Pasta (boil pasta, chop tomato, cheese).
+- **Menu** — Tomato Salad (chop lettuce, chop tomato), Cheese Burger (bread, fry patty, cheese, chop lettuce), Tomato Pasta (boil pasta, chop tomato, cheese), and Double Burger (five steps, unlocked after three serves). Frying is a timing skill: watch the heat gauge and tap the pan while the needle is in the green zone — the middle of it is a perfect fry worth +25. Orders get tighter as you serve more.
 
 ## Run it
 

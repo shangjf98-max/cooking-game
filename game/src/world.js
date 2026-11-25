@@ -1,17 +1,26 @@
 // 游戏世界：订单、步骤、分数、连击、计时、胜负。纯逻辑，不画画。
 import {
   INGREDIENTS, ING_BY_ID, RECIPES, RECIPE_BY_ID,
-  SHIFT_SECONDS, ORDER_SECONDS, MAX_HEARTS,
+  SHIFT_SECONDS, ORDER_SECONDS, ORDER_SECONDS_FLOOR, MAX_HEARTS,
 } from './config.js';
 
 export const SCREEN_TITLE = 'title';
 export const SCREEN_PLAY = 'play';
 export const SCREEN_OVER = 'over';
 
+// 煎肉饼的火候表：点煎锅时表针在绿区（55–85）算煎好、
+// 在绿区正中（65–80）算完美；低于 55 还生，高于 85 煎糊重做。
+export const FRY_GREEN_LOW = 55;
+export const FRY_GREEN_HIGH = 85;
+export const FRY_PERFECT_LOW = 65;
+export const FRY_PERFECT_HIGH = 80;
+
 let nextOrderId = 1;
 
-export function makeOrder(recipeId, seedRand) {
+export function makeOrder(recipeId, seedRand, served = 0) {
   const recipe = RECIPE_BY_ID[recipeId];
+  // 压力递增：每上 3 单，新单时限少 5 秒，最少 30 秒。
+  const timeLeft = Math.max(ORDER_SECONDS_FLOOR, ORDER_SECONDS - Math.floor(served / 3) * 5);
   return {
     id: nextOrderId++,
     recipeId,
@@ -19,14 +28,17 @@ export function makeOrder(recipeId, seedRand) {
     base: recipe.base,
     steps: recipe.steps.map((s) => ({ ...s, done: false })),
     stepIndex: 0,
-    timeLeft: ORDER_SECONDS,
+    timeLeft,
+    timeMax: timeLeft,
     // 顾客头像色，用订单 id 轮换，保证截图里每单顾客不一样。
     customer: ['#E4572E', '#2E86AB', '#F2A541', '#7B5EA7'][(nextOrderId + (seedRand ? 1 : 0)) % 4],
   };
 }
 
-export function pickRecipe(rand) {
-  return RECIPES[Math.floor(rand() * RECIPES.length)].id;
+export function pickRecipe(rand, served = 0) {
+  // 双层汉堡（5 步）是后期的菜：上满 3 单后才进菜单，菜式越往后越难。
+  const pool = served >= 3 ? RECIPES : RECIPES.slice(0, 3);
+  return pool[Math.floor(rand() * pool.length)].id;
 }
 
 export function createWorld(rand) {
@@ -52,7 +64,14 @@ export function createWorld(rand) {
     elapsed: 0,
     flash: 0,
     overReason: '',
+    floats: [], // 得分飘字：{ text, x, y, ttl }
+    lastPerfect: false,
+    paused: false,
   };
+}
+
+export function addFloat(world, text, x, y) {
+  world.floats.push({ text, x, y, ttl: 1.4 });
 }
 
 export function activeOrder(world) {
@@ -93,13 +112,15 @@ export function takeIngredient(world, ingId) {
   }
   world.activeStep = {
     orderId: order.id, ing: ingId, action: ing.action,
-    progress: 0, hits: ing.hits, max: ing.hits,
+    progress: 0, hits: ing.hits, max: ing.action === 'fry' ? 100 : ing.hits,
   };
-  setHint(world, ing.action === 'chop' ? '点砧板切菜！' : ing.action === 'fry' ? '点煎锅煎肉饼！' : '点汤锅煮面，搅拌更快！');
+  setHint(world, ing.action === 'chop' ? '点砧板切菜！' : ing.action === 'fry' ? '看火候表！绿区点煎锅' : '点汤锅煮面，搅拌更快！');
   return true;
 }
 
-// 点加工台：推进当前步骤；煎肉饼过火会糊，要重煎。
+// 点加工台：推进当前步骤。
+// 煎肉饼看火候表：表针在绿区点煎锅才算煎好，正中是完美；
+// 还生就继续煎，糊了（表针冲过 100）重做这一步。
 export function workStation(world, action) {
   if (world.screen !== SCREEN_PLAY) return false;
   const step = world.activeStep;
@@ -107,18 +128,24 @@ export function workStation(world, action) {
   const order = activeOrder(world);
   if (!order || step.orderId !== order.id) { world.activeStep = null; return false; }
   if (action === 'fry') {
-    step.progress += 1;
-    // 煎 5 下正好，超过 7 下糊了：重做这一步。
-    if (step.progress > step.max + 2) {
+    const gauge = step.progress;
+    if (gauge < FRY_GREEN_LOW) {
+      setHint(world, '肉饼还生着，再等一等！');
+      return true;
+    }
+    if (gauge > FRY_GREEN_HIGH) {
       world.activeStep = null;
       setHint(world, '肉饼煎糊了！重新煎一块');
       return true;
     }
-  } else if (action === 'boil') {
-    step.progress += 1;
-  } else {
-    step.progress += 1;
+    world.lastPerfect = gauge >= FRY_PERFECT_LOW && gauge <= FRY_PERFECT_HIGH;
+    const done = currentStep(order);
+    world.activeStep = null;
+    if (done) finishStep(world, order, done);
+    setHint(world, world.lastPerfect ? '完美火候！' : '煎好了！');
+    return true;
   }
+  step.progress += 1;
   if (step.progress >= step.max) {
     const done = currentStep(order);
     world.activeStep = null;
@@ -150,22 +177,26 @@ export function serveDish(world) {
   world.bestCombo = Math.max(world.bestCombo, world.combo);
   const timeBonus = Math.round(order.timeLeft * 2);
   const comboBonus = (world.combo - 1) * 25;
-  const gained = order.base + timeBonus + comboBonus;
+  const perfectBonus = world.lastPerfect ? 25 : 0;
+  const gained = order.base + timeBonus + comboBonus + perfectBonus;
   world.score += gained;
   world.servedCount += 1;
   world.orders.shift();
-  world.orders.push(makeOrder(pickRecipe(world.rand), world.rand));
+  world.orders.push(makeOrder(pickRecipe(world.rand, world.servedCount), world.rand, world.servedCount));
   world.plated = [];
   world.readyToServe = false;
   world.activeStep = null;
   world.flash = 0.4;
+  addFloat(world, `+${gained}`, 730, 290);
+  if (world.lastPerfect) addFloat(world, '完美火候！', 730, 250);
+  world.lastPerfect = false;
   setHint(world, `上菜！+${gained} 分（连击 x${world.combo}）`);
   return true;
 }
 
 function failOrder(world, order) {
   world.orders.shift();
-  world.orders.push(makeOrder(pickRecipe(world.rand), world.rand));
+  world.orders.push(makeOrder(pickRecipe(world.rand, world.servedCount), world.rand, world.servedCount));
   world.hearts -= 1;
   world.combo = 0;
   world.failedCount += 1;
@@ -205,6 +236,16 @@ export function stepWorld(world, dt) {
   if (order) {
     order.timeLeft -= dt;
     if (order.timeLeft <= 0) failOrder(world, order);
+  }
+  // 飘字上浮消失。
+  world.floats = world.floats.filter((f) => (f.ttl -= dt) > 0);
+  // 煎肉饼的火候表自己往上涨，冲过 100 就糊了。
+  if (world.activeStep && world.activeStep.action === 'fry') {
+    world.activeStep.progress += dt * 26;
+    if (world.activeStep.progress > 100) {
+      world.activeStep = null;
+      setHint(world, '肉饼煎糊了！重新煎一块');
+    }
   }
   // 煮面会自动冒泡推进一半，搅拌（点汤锅）才快。
   if (world.activeStep && world.activeStep.action === 'boil') {

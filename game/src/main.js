@@ -82,6 +82,7 @@ createInput(canvas, {
   pause() {
     if (world.screen === SCREEN_PLAY) {
       paused = !paused;
+      world.paused = paused;
       announce(paused ? '已暂停，按 P 继续。' : '继续做饭！');
     }
   },
