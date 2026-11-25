@@ -315,7 +315,7 @@ export function drawGame(ctx, world) {
     ctx.save();
     ctx.globalAlpha = Math.max(0, f.ttl / 1.4);
     const fy = f.y - (1.4 - f.ttl) * 40;
-    ctx.font = `900 30px ${FONT}`;
+    ctx.font = '900 30px "Trebuchet MS", "Segoe UI", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(255,243,214,0.95)';
     ctx.strokeText(f.text, f.x, fy);
